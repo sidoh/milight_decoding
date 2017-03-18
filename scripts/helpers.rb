@@ -524,7 +524,7 @@ end
 
 def xor_key(b0)
   # Generate most significant nibble
-  shift = (b0 & 0x0F) < 0x04 ? 0 : 1
+  shift = 0#(b0 & 0x0F) < 0x04 ? 0 : 1
   x = (((b0 & 0xF0) >> 4) + shift + 6) % 8
   msn = (((4 + x) ^ 1) & 0x0F) << 4
 

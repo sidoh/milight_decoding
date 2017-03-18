@@ -1,22 +1,15 @@
 class PacketTranscoder
   module S2Bases
-    COLOR = [0x5A, 0x22, 0x30, 0x11]
-    MODE = KELVIN = SATURATION = BRIGHTNESS = ON_OFF = COLOR
-    # KELVIN = COLOR.map { |x| x + 0x80 }
-    # SATURATION = [0x9A, 0x62, 0x70, 0x51]
-    # BRIGHTNESS = [0x9A, 0x62, 0x70, 0x51]
+    ARGUMENT = [0x5A, 0x22, 0x30, 0x11]
     GROUP = [0xAF, 0x04, 0xDD, 0x07]
     COMMAND = [0xAF, 0x03, 0x1D, 0xF3]
-    # ON_OFF = [0x1A, 0xE2, 0xF0, 0xD1]
     SEQUENCE = [0x04, 0xD8, 0x71, 0x42]
     
     B1 = [0x45, 0x1F, 0x14, 0x5C]
     
-    # ID1 = [0x2B, 0xC9, 0xE3, 0x11]
     ID1 = [0xAB, 0x49, 0x63, 0x91]
     ID2 = [0x2D, 0x1F, 0x4A, 0xEB]
     
-    # CHECKSUM = [0xA1, 0x53, 0x78, 0xA4]
     CHECKSUM = [0xE1, 0x93, 0xB8, 0xE4]
   end
   
@@ -145,17 +138,17 @@ class PacketTranscoder
       @invert = invert
     end
     
-    def value_for(b0)
-      # Generate most significant nibble
-      shift = (b0 & 0x0F) < 0x04 ? 0 : 1
-      x = (((b0 & 0xF0) >> 4) + shift + 6) % 8
-      msn = (((4 + x) ^ 1) & 0x0F) << 4
+def value_for(p0)
+  # Generate most significant nibble
+  shift = (p0 & 0x0F) < 0x04 ? 0 : 1
+  x = (((p0 & 0xF0) >> 4) + shift + 6) % 8
+  msn = (((4 + x) ^ 1) & 0x0F) << 4
 
-      # Generate least significant nibble
-      lsn = ((((b0 & 0xF) + 4)^2) & 0x0F)
-  
-      msn | lsn
-    end
+  # Generate least significant nibble
+  lsn = ((((p0 & 0xF) + 4)^2) & 0x0F)
+
+  msn | lsn
+end
   end
   
   module Transcoders
@@ -172,16 +165,11 @@ class PacketTranscoder
     COMMAND_TRANSCODERS = {
       Commands::ON => Transcoder.new(0, S2Calculator.new(S2Bases::ON_OFF, 0x14, 0x93)),
       Commands::OFF => Transcoder.new(0, S2Calculator.new(S2Bases::ON_OFF, 0x14, 0x93)),
-      # Commands::OFF => Transcoder.new(0, S2Calculator.new(S2Bases::ON_OFF, 0x54, 0xD3)),
-      Commands::COLOR => Transcoder.new(0, S2Calculator.new(S2Bases::COLOR, 0x14, 0x93)),
-      Commands::BRIGHTNESS => Transcoder.new(0, S2Calculator.new(S2Bases::SATURATION, 0x54, 0xD3)),
-      Commands::SATURATION => Transcoder.new(0, S2Calculator.new(S2Bases::SATURATION, 0x54, 0xD3)),
-      Commands::KELVIN => Transcoder.new(0, S2Calculator.new(S2Bases::KELVIN, 0x14, 0x93)),
+      Commands::COLOR => Transcoder.new(0, S2Calculator.new(S2Bases::ARGUMENT, 0x14, 0x93)),
+      Commands::BRIGHTNESS => Transcoder.new(0, S2Calculator.new(S2Bases::ARGUMENT, 0x54, 0xD3)),
+      Commands::SATURATION => Transcoder.new(0, S2Calculator.new(S2Bases::ARGUMENT, 0x54, 0xD3)),
+      Commands::KELVIN => Transcoder.new(0, S2Calculator.new(S2Bases::ARGUMENT, 0x14, 0x93)),
       Commands::MODE => Transcoder.new(0, S2Calculator.new(S2Bases::MODE, 0x14, 0x93))
-      # Commands::COLOR => Transcoder.new(0x15, S2Calculator.new(S2Bases::COLOR, 0x14, 0x93)),
-      # Commands::BRIGHTNESS => Transcoder.new(0x0E, S2Calculator.new(S2Bases::SATURATION, 0x54, 0xD3)),
-      # Commands::SATURATION => Transcoder.new(0x0E, S2Calculator.new(S2Bases::SATURATION, 0x54, 0xD3)),
-      # Commands::KELVIN => Transcoder.new(0x0C, S2Calculator.new(S2Bases::KELVIN, 0x14, 0x93))
     }
   end
   
