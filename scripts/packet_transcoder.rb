@@ -7,8 +7,8 @@ class PacketTranscoder
     
     B1 = [0x45, 0x1F, 0x14, 0x5C]
     
-    ID1 = [0xAB, 0x49, 0x63, 0x91]
-    ID2 = [0x2D, 0x1F, 0x4A, 0xEB]
+    ID1 = [0x2B, 0xC9, 0xE3, 0x11]
+    ID2 = [0xEE, 0xDE, 0x0B, 0xAA]
     
     CHECKSUM = [0xE1, 0x93, 0xB8, 0xE4]
   end
@@ -23,7 +23,7 @@ class PacketTranscoder
       KELVIN = 6,
       MODE = 7,
       MODE_SPEED_UP = 8,
-      MODE_SPEED_DOWN = 9,
+      MODE_SPEED_DOWN = 9
     ]
     
     PACKET_KEY = {
@@ -42,7 +42,7 @@ class PacketTranscoder
       ON => 0xC0,
       OFF => 0xC5,
       COLOR => 0x15,
-      SATURATION => 0,
+      SATURATION => 0x4F,
       BRIGHTNESS => 0x4F,
       KELVIN => 0x4C,
       MODE => 0,
@@ -138,24 +138,24 @@ class PacketTranscoder
       @invert = invert
     end
     
-def value_for(p0)
-  # Generate most significant nibble
-  shift = (p0 & 0x0F) < 0x04 ? 0 : 1
-  x = (((p0 & 0xF0) >> 4) + shift + 6) % 8
-  msn = (((4 + x) ^ 1) & 0x0F) << 4
+    def value_for(p0)
+      # Generate most significant nibble
+      shift = (p0 & 0x0F) < 0x04 ? 0 : 1
+      x = (((p0 & 0xF0) >> 4) + shift + 6) % 8
+      msn = (((4 + x) ^ 1) & 0x0F) << 4
 
-  # Generate least significant nibble
-  lsn = ((((p0 & 0xF) + 4)^2) & 0x0F)
+      # Generate least significant nibble
+      lsn = ((((p0 & 0xF) + 4)^2) & 0x0F)
 
-  msn | lsn
-end
+      msn | lsn
+    end
   end
   
   module Transcoders
     POSITION_TRANSCODERS = {
       1 => Transcoder.new(0, S2Calculator.new(S2Bases::B1, 0x54, 0xD3)),
       2 => Transcoder.new(0, S2Calculator.new(S2Bases::ID1, 0x54, 0xD3)),
-      3 => Transcoder.new(0, S2Calculator.new(S2Bases::ID2, 0x14, 0x93)),
+      3 => Transcoder.new(0, S2Calculator.new(S2Bases::ID2, 0x54, 0xD3)),
       4 => Transcoder.new(0, S2Calculator.new(S2Bases::COMMAND, 0x54, 0xD3)),
       6 => Transcoder.new(0, S2Calculator.new(S2Bases::SEQUENCE, 0x54, 0xD3)),
       7 => Transcoder.new(0, S2Calculator.new(S2Bases::GROUP, 0x54, 0xD3)),
@@ -163,13 +163,13 @@ end
     }
     
     COMMAND_TRANSCODERS = {
-      Commands::ON => Transcoder.new(0, S2Calculator.new(S2Bases::ON_OFF, 0x14, 0x93)),
-      Commands::OFF => Transcoder.new(0, S2Calculator.new(S2Bases::ON_OFF, 0x14, 0x93)),
+      Commands::ON => Transcoder.new(0, S2Calculator.new(S2Bases::ARGUMENT, 0x14, 0x93)),
+      Commands::OFF => Transcoder.new(0, S2Calculator.new(S2Bases::ARGUMENT, 0x14, 0x93)),
       Commands::COLOR => Transcoder.new(0, S2Calculator.new(S2Bases::ARGUMENT, 0x14, 0x93)),
       Commands::BRIGHTNESS => Transcoder.new(0, S2Calculator.new(S2Bases::ARGUMENT, 0x54, 0xD3)),
       Commands::SATURATION => Transcoder.new(0, S2Calculator.new(S2Bases::ARGUMENT, 0x54, 0xD3)),
       Commands::KELVIN => Transcoder.new(0, S2Calculator.new(S2Bases::ARGUMENT, 0x14, 0x93)),
-      Commands::MODE => Transcoder.new(0, S2Calculator.new(S2Bases::MODE, 0x14, 0x93))
+      Commands::MODE => Transcoder.new(0, S2Calculator.new(S2Bases::ARGUMENT, 0x14, 0x93))
     }
   end
   
@@ -229,7 +229,7 @@ end
       encoded_arg = (encoded_arg * 2) % 0x100
     end
     
-    if command == Commands::ON || command == Commands::OFF
+    if command == Commands::ON || command == Commands::OFF || command == Commands::LINK
       encoded_arg = encoded_arg + group
     end
     
