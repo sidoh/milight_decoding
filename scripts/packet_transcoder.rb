@@ -1,6 +1,6 @@
 class PacketTranscoder
   module S2Bases
-    ARGUMENT = [0x5A, 0x22, 0x30, 0x11]
+    ARGUMENT = [0x1A, 0xE2, 0xF0, 0xD1]
     GROUP = [0xAF, 0x04, 0xDD, 0x07]
     COMMAND = [0xAF, 0x03, 0x1D, 0xF3]
     SEQUENCE = [0x04, 0xD8, 0x71, 0x42]
@@ -39,8 +39,8 @@ class PacketTranscoder
     }
     
     RANGE_START = {
-      ON => 0xC0,
-      OFF => 0xC5,
+      ON => 0,
+      OFF => 5,
       COLOR => 0x15,
       SATURATION => 0x4F,
       BRIGHTNESS => 0x4F,
@@ -159,17 +159,17 @@ class PacketTranscoder
       4 => Transcoder.new(0, S2Calculator.new(S2Bases::COMMAND, 0x54, 0xD3)),
       6 => Transcoder.new(0, S2Calculator.new(S2Bases::SEQUENCE, 0x54, 0xD3)),
       7 => Transcoder.new(0, S2Calculator.new(S2Bases::GROUP, 0x54, 0xD3)),
-      8 => Transcoder.new(2, S2Calculator.new(S2Bases::CHECKSUM, 0x100, 0x100))
+      8 => Transcoder.new(3, S2Calculator.new(S2Bases::CHECKSUM, 0x100, 0x100))
     }
     
     COMMAND_TRANSCODERS = {
-      Commands::ON => Transcoder.new(0, S2Calculator.new(S2Bases::ARGUMENT, 0x14, 0x93)),
-      Commands::OFF => Transcoder.new(0, S2Calculator.new(S2Bases::ARGUMENT, 0x14, 0x93)),
-      Commands::COLOR => Transcoder.new(0, S2Calculator.new(S2Bases::ARGUMENT, 0x14, 0x93)),
+      Commands::ON => Transcoder.new(0, S2Calculator.new(S2Bases::ARGUMENT, 0x54, 0xD3)),
+      Commands::OFF => Transcoder.new(0, S2Calculator.new(S2Bases::ARGUMENT, 0x54, 0xD3)),
+      Commands::COLOR => Transcoder.new(0, S2Calculator.new(S2Bases::ARGUMENT, 0x54, 0xD3)),
       Commands::BRIGHTNESS => Transcoder.new(0, S2Calculator.new(S2Bases::ARGUMENT, 0x54, 0xD3)),
       Commands::SATURATION => Transcoder.new(0, S2Calculator.new(S2Bases::ARGUMENT, 0x54, 0xD3)),
-      Commands::KELVIN => Transcoder.new(0, S2Calculator.new(S2Bases::ARGUMENT, 0x14, 0x93)),
-      Commands::MODE => Transcoder.new(0, S2Calculator.new(S2Bases::ARGUMENT, 0x14, 0x93))
+      Commands::KELVIN => Transcoder.new(0, S2Calculator.new(S2Bases::ARGUMENT, 0x54, 0xD3)),
+      Commands::MODE => Transcoder.new(0, S2Calculator.new(S2Bases::ARGUMENT, 0x54, 0xD3))
     }
   end
   
@@ -195,24 +195,27 @@ class PacketTranscoder
     b[5] = arg
     
     # Saturation starts has lowest/highest flipped and is offset from 0
-    if command == Commands::PACKET_KEY[Commands::SATURATION] && (arg <= 0x31 || arg >= 0xCD)
-      arg = 0x64 - ((0x33 + arg) % 0x100)
-    end
+    # if command == Commands::PACKET_KEY[Commands::SATURATION] && (arg <= 0x31 || arg >= 0xCD)
+    #   arg = 0x64 - ((0x33 + arg) % 0x100)
+    # end
     
     b
   end
   
   def encode_packet(packet)
+    p = packet.clone
     key = packet[0]
     command = packet[4]
+    p[0] = key
+    p[8] = (packet[1..7].reduce(&:+) + XorCalculator.new.value_for(key)) % 0x100
     
     Transcoders::POSITION_TRANSCODERS.each do |i, coder|
-      packet[i] = coder.encode(key, packet[i])
+      p[i] = coder.encode(key, p[i])
     end
     
-    packet[5] = Transcoders::COMMAND_TRANSCODERS[Commands.from_packet_key(command & 0xF)].encode(key, packet[5])
+    p[5] = Transcoders::COMMAND_TRANSCODERS[Commands.from_packet_key(command & 0xF)].encode(key, packet[5])
     
-    packet
+    p
   end
   
   def build_packet(key, device_id, command, arg, group, seq)

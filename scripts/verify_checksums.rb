@@ -16,7 +16,8 @@ Dir.glob("#{PATH}/**/*.txt").each do |file|
         puts "Mismatched checksum: "
         puts "File              : #{file}"
         puts "Packet            : #{line}"
-        puts "Computed Checksum : #{'%02X' % computed[8]}"
+        puts "Decoded Packet    : #{decoded.map { |x| '%02X' % x }.join(' ')}"
+        puts "Re-encoded        : #{computed.map { |x| '%02X' % x }.join(' ')}"
       end
     end
   end

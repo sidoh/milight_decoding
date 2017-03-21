@@ -431,6 +431,17 @@ def decode(bytes, a, b, c, matches = nil, _print = true)
   end
 end
 
+def get_sum_sequence(type:, key:, arg_range: (0..0xFF), group: 1)
+  coder = PacketTranscoder.new
+  extract_fn = ->(packet) do
+    b = packet.map { |x| x.to_i(16) }
+    decoded = coder.decode_packet(b)
+    sprintf '%02X', ((xor_key(b[0]) + decoded[1..7].reduce(&:+)) % 0x100)
+  end
+  
+  get_sequence(type: type, key: key, arg_range: arg_range, group: group, extract_fn: extract_fn)
+end
+
 def get_sequence(type:, key:, col: nil, arg_range: (0..0xFF), group: 1, extract_fn: nil)
   s = ""
   key = ("%02X" % key) if !key.is_a?(String)
