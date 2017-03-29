@@ -48,9 +48,15 @@ class Milight
   
   attr_reader :socket
   
-  def initialize
+  def initialize(host = ADDR[0], port = ADDR[1])
     @socket = UDPSocket.new
-    socket.setsockopt(Socket::SOL_SOCKET, Socket::SO_BROADCAST, true)
+    @host = host
+    @port = port
+    
+    if host == ADDR[0]
+      socket.setsockopt(Socket::SOL_SOCKET, Socket::SO_BROADCAST, true)
+    end
+    
     @sequence = 0
   end
   
@@ -59,7 +65,7 @@ class Milight
   end
 
   def send(msg)
-    socket.send(msg, 0, ADDR[0], ADDR[1])
+    socket.send(msg, 0, @host, @port)
   end
 
   def recv

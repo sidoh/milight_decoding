@@ -177,7 +177,61 @@ def search_params(key_seqs:, s1: 0, start_range: (0..0xFF), max_s2_len: nil)
     [i, ranges]
   end
   
-  Hash[r]
+  result = Hash[r]
+end
+
+def compute_s2_params(*param_candidates)
+  param_candidates = param_candidates
+    .map do |params|
+      v = params
+        .map do |mod, candidates| 
+        candidates.select do |candidate| 
+          candidate[:ranges].values.first.first.end == 80+mod 
+        end
+        .map do |y| 
+          '%02X' % y[:s2]
+        end
+      end
+    end
+    
+  filtered_candidates = Array.new(4)
+  
+  param_candidates.each do |range|
+    range.each_with_index.map do |s2s, mod|
+      if filtered_candidates[mod].nil?
+        filtered_candidates[mod] = Set.new(s2s)
+      elsif s2s.any?
+        filtered_candidates[mod] = filtered_candidates[mod].intersection(Set.new(s2s))
+      end
+    end
+  end
+  
+  if filtered_candidates.any? { |x| x.empty? }
+    puts "WARNING: some mod values had empty sets"
+  end
+  
+  best = filtered_candidates
+    .each_with_index
+    .select { |x| x[0].size > 0 }
+    .min_by { |x| x[0].size }
+    
+  indexes = param_candidates.map do |range|
+    puts "range: #{range[1].inspect}"
+    best[0].map do |val|
+      v = range[best[1]]
+        .each_with_index
+        .map { |x, i| [x, i] }
+        .find { |x| x[0] == val }
+        # .map { |x, i| puts ">#{x.inspect}"; x }
+      v && v[1]
+    end
+  end
+  
+  indexes
+    .first
+    .map do |index|
+      param_candidates.first.map { |x| x[index] }
+    end
 end
 
 def to_ranges(array)
@@ -318,6 +372,7 @@ end
 
 def search_sequence(seq:, mask: 0xFF, start: 0, increments: 1, decoded_seq: nil, xor_range: (0..0xFF), s1_range: (0..0xFF), s2_range: (0..0xFF), invert_key: false, logging: false)
   bytes = parse_bytes(seq)
+  decoded_seq = parse_bytes(decoded_seq) if decoded_seq && decoded_seq.is_a?(String)
   
   l = 0
   fns = []
@@ -426,7 +481,7 @@ def decode(bytes, a, b, c, matches = nil, _print = true)
       printf "%02X %s %02X %s\n", w, x, v, (w == v ? '✔' : '') if _print
       v
     else
-      puts ".. .. .."
+      puts ".. .. .." if _print
     end
   end
 end
@@ -510,7 +565,7 @@ def get_group_sequence(type:, col:, key:, arg: nil, group_range: (1..4))
   s
 end
 
-def get_key_sequence(type:, col:, key_col: 0, arg: nil, group: 1, key_range: (0..0xFF), device: DEFAULT_DEVICE)
+def get_key_sequence(type:, col:, key_col: 0, arg: nil, group: 1, key_range: (0..0xFF), split: true, device: DEFAULT_DEVICE)
   lines_by_key = {}
   
   File.open(get_packet_capture_file(type: type, group: group, arg: arg, device: device), 'r') do |file|
@@ -528,6 +583,16 @@ def get_key_sequence(type:, col:, key_col: 0, arg: nil, group: 1, key_range: (0.
     else
       s += '..'
     end
+  end
+  
+  if split
+    s = s.scan(/.{2}/)
+      .each_with_index
+      .map do |x, i|
+        [x, i%4]
+      end
+      .group_by { |x| x[1] }
+      .map { |_, v| v.map { |x| x[0] }.join }
   end
   
   s
